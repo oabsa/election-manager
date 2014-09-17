@@ -245,7 +245,7 @@ function oaelectionmanager_dummypost($posts) {
     $p->post_date = current_time('mysql');
     $p->post_date_gmt =  current_time('mysql', $gmt = 1);
     $p->post_content = oaelectionmanager_submission_page($wp);
-    $p->post_title = 'Lodge Dues Status';
+    $p->post_title = 'Election Results Submission';
     $p->post_excerpt = '';
     $p->post_status = 'publish';
     $p->ping_status = 'closed';
@@ -296,7 +296,7 @@ function oaelectionmanager_dummypost($posts) {
 }
 
 function oaelectionmanager_plugin_menu() {
-    add_options_page( 'OA Dues Lookup', 'OA Dues Lookup', 'manage_options', 'oaelectionmanager', 'oaelectionmanager_options' );
+    add_options_page( 'OA Election Manager', 'OA Election Manager', 'manage_options', 'oaelectionmanager', 'oaelectionmanager_options' );
 }
 
 function oaelectionmanager_options() {
@@ -324,9 +324,9 @@ function oaelectionmanager_options() {
         $slug = $_POST['oaelectionmanager_slug'];
 
         # form validation code goes here
-        //if (!$formvalidated) {
+        # if (!$formvalidated) {
         /*    ?><div class="error"><p><strong>'<?php esc_html_e($help_email); ?>' is not a valid email address.</strong></p></div><?php */
-        //} else {
+        # } else {
 
             $foundchanges = 0;
             $slug = sanitize_title($slug);
@@ -338,7 +338,7 @@ function oaelectionmanager_options() {
             if ($foundchanges) {
                 ?><div class="updated"><p><strong>Changes saved.</strong></p></div><?php
             }
-        }
+        # }
 
     }
 
