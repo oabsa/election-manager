@@ -100,14 +100,14 @@ function oaelectionmanager_install() {
     // change it'll need update code (see below).
 
     $sql = "CREATE TABLE ${dbprefix}chapter (
-    id INT PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     unitid INT NOT NULL,
     name TINYTEXT NOT NULL DEFAULT ''
     )";
     oaelectionmanager_create_table( $sql );
 
     $sql = "CREATE TABLE ${dbprefix}troop (
-    id INT PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     chapter_id INT NOT NULL FOREIGN KEY ${dbprefix}chapter(id),
     troopnum INT NOT NULL,
     leader_name VARCHAR(120),
@@ -119,7 +119,7 @@ function oaelectionmanager_install() {
     oaelectionmanager_create_table( $sql );
 
     $sql = "CREATE TABLE ${dbprefix}election (
-    id INT PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     troop_id INT NOT NULL FOREIGN KEY ${dbprefix}troop(id),
     election_date DATE,
     submission_source CHAR(2) NOT NULL DEFAULT 'UE', /* or SM */
@@ -138,7 +138,7 @@ function oaelectionmanager_install() {
     oaelectionmanager_create_table( $sql );
 
     $sql = "CREATE TABLE ${dbprefix}electedscout (
-    id INT PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     election_id INT NOT NULL FOREIGN KEY ${dbprefix}election(id),
     firstname VARCHAR(120) NOT NULL,
     middlename VARCHAR(120) NOT NULL DEFAULT '',
