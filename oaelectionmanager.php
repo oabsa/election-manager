@@ -108,19 +108,20 @@ function oaelectionmanager_install() {
 
     $sql = "CREATE TABLE ${dbprefix}troop (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    chapter_id INT NOT NULL FOREIGN KEY ${dbprefix}chapter(id),
+    chapter_id INT NOT NULL,
     troopnum INT NOT NULL,
     leader_name VARCHAR(120),
     leader_phone VARCHAR(20),
     leader_email VARCHAR(250),
     meeting_location TEXT,
-    UNIQUE(chapter_id,troopnum)
+    UNIQUE(chapter_id,troopnum),
+    FOREIGN KEY (chapter_id) REFERENCES ${dbprefix}chapter(id)
     )";
     oaelectionmanager_create_table( $sql );
 
     $sql = "CREATE TABLE ${dbprefix}election (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    troop_id INT NOT NULL FOREIGN KEY ${dbprefix}troop(id),
+    troop_id INT NOT NULL,
     election_date DATE,
     submission_source CHAR(2) NOT NULL DEFAULT 'UE', /* or SM */
     reg_active INT,
@@ -133,13 +134,14 @@ function oaelectionmanager_install() {
     submitter_name VARCHAR(120),
     submitter_email VARCHAR(250),
     submitter_phone VARCHAR(20),
-    UNIQUE(troop_id,submission_source)
+    UNIQUE(troop_id,submission_source),
+    FOREIGN KEY (troop_id) REFERENCES ${dbprefix}troop(id)
     )";
     oaelectionmanager_create_table( $sql );
 
     $sql = "CREATE TABLE ${dbprefix}electedscout (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    election_id INT NOT NULL FOREIGN KEY ${dbprefix}election(id),
+    election_id INT NOT NULL,
     firstname VARCHAR(120) NOT NULL,
     middlename VARCHAR(120) NOT NULL DEFAULT '',
     lastname VARCHAR(120) NOT NULL,
@@ -153,7 +155,8 @@ function oaelectionmanager_install() {
     zip VARCHAR(10),
     birthdate DATE,
     phone VARCHAR(20),
-    UNIQUE(election_id,bsa_member_id)
+    UNIQUE(election_id,bsa_member_id),
+    FOREIGN KEY (election_id) REFERENCES ${dbprefix}election(id)
     )";
     oaelectionmanager_create_table( $sql );
 
