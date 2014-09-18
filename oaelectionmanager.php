@@ -211,28 +211,32 @@ function oaelectionmanager_install_data() {
 
 }
 
-function oaelectionmanager_submission_page( &$wp ) {
-    global $wpdb;
-    $dbprefix = $wpdb->prefix . "oaem_";
-
-    ob_start();
-    /* page content goes here */
-    return ob_get_clean();
-}
-
 function oaelectionmanager_url_handler( &$wp ) {
-    if($wp->request == get_option('oaelectionmanager_slug')) {
+    $slugchunks = explode("/" , $wp->request);
+    $parentslug = $slugchunks[0];
+    $sectionslug = $slugchunks[1];
+
+    if($parentslug == get_option('oaelectionmanager_slug')) {
         # http://stackoverflow.com/questions/17960649/wordpress-plugin-generating-virtual-pages-and-using-theme-template
         # Note that we don't need to do a template redirect as suggesting in
         # the example because all we do is load the template anyway. We can let
         # the real template code work like it's supposed to and only override
         # the content.
-        add_filter('the_posts', 'oaelectionmanager_dummypost');
+        switch ($sectionslug) {
+            case "report":
+                add_filter('the_posts', 'oaelectionmanager_uesubmit_page');
+                break;
+            case "smreport":
+                add_filter('the_posts', 'oaelectionmanager_smsubmit_page');
+                break;
+            default:
+                break;
+        }
         remove_filter('the_content', 'wpautop');
     }
 }
 
-function oaelectionmanager_dummypost($posts) {
+function oaelectionmanager_makedummypost() {
     // have to create a dummy post as otherwise many templates
     // don't call the_content filter
     global $wp, $wp_query;
@@ -244,13 +248,13 @@ function oaelectionmanager_dummypost($posts) {
     $p->post_author = 1;
     $p->post_date = current_time('mysql');
     $p->post_date_gmt =  current_time('mysql', $gmt = 1);
-    $p->post_content = oaelectionmanager_submission_page($wp);
-    $p->post_title = 'Election Results Submission';
+    $p->post_content = 'You forgot to set the page content';
+    $p->post_title = 'You forgot to set the page title';
     $p->post_excerpt = '';
     $p->post_status = 'publish';
     $p->ping_status = 'closed';
     $p->post_password = '';
-    $p->post_name = get_option('oaelectionmanager_slug');
+    $p->post_name = $wp->request;
     $p->to_ping = '';
     $p->pinged = '';
     $p->modified = $p->post_date;
@@ -292,8 +296,60 @@ function oaelectionmanager_dummypost($posts) {
     $wp_query->current_post = $p->ID;
     $wp_query->post_count = 1;
 
+    return $p;
+}
+
+/*
+ * ===================================
+ *
+ * User-facing page content is defined
+ * in the following functions
+ *
+ * ===================================
+ */
+
+function oaelectionmanager_submit_page($source_type) {
+    global $wpdb;
+    $dbprefix = $wpdb->prefix . "oaem_";
+
+    # initialize the page object
+    $p = oaelectionmanager_makedummypost();
+    $source_name = "INVALID SOURCE TYPE";
+    switch ($source_type) {
+        case "SM":
+            $source_name = "Troop Leader";
+            break;
+        case "UE":
+            $source_name = "Unit Election Team";
+            break;
+        default;
+            break;
+    }
+    $p->post_title = "Election Results Submission by $source_name";
+    ob_start();
+
+    /* page content goes here */
+
+    $p->post_content = ob_get_clean();
     return array($p);
 }
+
+function oaelectionmanager_uesubmit_page($post) {
+    return oaelectionmanager_submit_page("UE");
+}
+
+function oaelectionmanager_smsubmit_page($post) {
+    return oaelectionmanager_submit_page("SM");
+}
+
+/*
+ * ====================================
+ *
+ * Admin-facing page content is defined
+ * in the following functions
+ *
+ * ====================================
+ */
 
 function oaelectionmanager_plugin_menu() {
     add_options_page( 'OA Election Manager', 'OA Election Manager', 'manage_options', 'oaelectionmanager', 'oaelectionmanager_options' );
