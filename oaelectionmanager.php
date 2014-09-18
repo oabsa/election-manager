@@ -324,9 +324,11 @@ function oaelectionmanager_options() {
         $slug = $_POST['oaelectionmanager_slug'];
 
         # form validation code goes here
-        # if (!$formvalidated) {
-        /*    ?><div class="error"><p><strong>'<?php esc_html_e($help_email); ?>' is not a valid email address.</strong></p></div><?php */
-        # } else {
+        /*
+        if (!$formvalidated) {
+            ?><div class="error"><p><strong>'<?php esc_html_e($help_email); ?>' is not a valid email address.</strong></p></div><?php
+        } else {
+        */
 
             $foundchanges = 0;
             $slug = sanitize_title($slug);
@@ -338,7 +340,9 @@ function oaelectionmanager_options() {
             if ($foundchanges) {
                 ?><div class="updated"><p><strong>Changes saved.</strong></p></div><?php
             }
-        # }
+        /*
+        }
+        */
 
     }
 
