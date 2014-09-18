@@ -32,12 +32,16 @@ add_action( 'parse_request', 'oaelectionmanager_url_handler' );
 add_action( 'plugins_loaded', 'oaelectionmanager_update_db_check' );
 register_activation_hook( __FILE__, 'oaelectionmanager_install' );
 register_activation_hook( __FILE__, 'oaelectionmanager_install_data' );
-add_action( 'wp_enqueue_scripts', 'oaelectionmanager_enqueue_css' );
+add_action( 'wp_enqueue_scripts', 'oaelectionmanager_enqueue_scripts' );
 add_action( 'init', 'oaelectionmanager_plugin_updater_init' );
 
-function oaelectionmanager_enqueue_css() {
+add_action( 'wp_ajax_oaem_submit_election', 'oaelectionmanager_ajax_submit_election' );
+add_action( 'wp_ajax_nopriv_oaem_submit_election', 'oaelectionmanager_ajax_submit_election' ); // need this to serve non logged in users
+
+function oaelectionmanager_enqueue_scripts() {
     wp_register_style( 'oaelectionmanager-style', plugins_url('style.css', __FILE__) );
-    wp_enqueue_style('oaelectionmanager-style');
+    wp_enqueue_style( 'oaelectionmanager-style' );
+    wp_enqueue_script( 'jquery' );
 }
 
 function oaelectionmanager_plugin_updater_init() {
@@ -99,10 +103,21 @@ function oaelectionmanager_install() {
     // only if it doesn't exist yet. If the columns or indexes need to
     // change it'll need update code (see below).
 
+    $sql = "CREATE TABLE ${dbprefix}district (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sortkey INT NOT NULL DEFAULT 0,
+    name VARCHAR(120) NOT NULL DEFAULT '',
+    UNIQUE(name)
+    )";
+    oaelectionmanager_create_table( $sql );
+
     $sql = "CREATE TABLE ${dbprefix}chapter (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    unitid INT NOT NULL,
-    name TINYTEXT NOT NULL DEFAULT ''
+    sortkey INT NOT NULL DEFAULT 0,
+    name VARCHAR(120) NOT NULL DEFAULT '',
+    district_id INT NOT NULL,
+    UNIQUE(name),
+    FOREIGN KEY (district_id) REFERENCES ${dbprefix}district(id)
     )";
     oaelectionmanager_create_table( $sql );
 
@@ -303,6 +318,24 @@ function oaelectionmanager_makedummypost() {
 }
 
 /*
+ * ==========================
+ *
+ * AJAX handlers are defined
+ * in the following functions
+ *
+ * ==========================
+ */
+
+function oaelectionmanager_ajax_submit_election() {
+  check_ajax_referer("oaem_election_form"); // this is the name you gave the nonce
+  $chapter = $_POST["chapter"];
+  $troop = $_POST["troopnum"];
+
+  ?>Got submission from Chapter <?php esc_html_e($chapter) ?> Troop <?php esc_html_e($troop)?>.<?php
+  die(); // wordpress may print out a spurious zero without this
+}
+
+/*
  * ===================================
  *
  * User-facing page content is defined
@@ -329,9 +362,57 @@ function oaelectionmanager_submit_page($source_type) {
             break;
     }
     $p->post_title = "Election Results Submission by $source_name";
-    ob_start();
 
+    $chapters = $wpdb->get_results("SELECT c.id AS id, c.name AS chapter_name, d.name AS district_name FROM ${dbprefix}chapter AS c LEFT JOIN ${dbprefix}district AS d ON c.district_id = d.id ORDER BY c.sortkey");
+    $nonce = wp_create_nonce( 'oaem_election_form' );
+
+    ob_start();
     /* page content goes here */
+    ?>
+    <script type='text/javascript'>
+    <!--
+
+function oaem_submit_election() {
+    jQuery.ajax({
+        type: "post",
+        url: "<?php esc_html_e(admin_url('admin-ajax.php')) ?>",
+        data: {
+             action: 'oaem_submit_election',
+             _ajax_nonce: '<?php echo $nonce; ?>',
+             chapter: escape(jQuery('#chapter').val()),
+             troopnum: escape(jQuery('#troopnum').val())
+        },
+        beforeSend: function() {
+            jQuery("#submit_election_button").fadeOut('fast');
+        },
+        success: function(html) {
+            jQuery("#response_area").html(html);
+        }
+    });
+}
+jQuery(document).ready(function() {
+    jQuery('#submit_election_button').click(function() {
+        oaem_submit_election();
+    });
+});
+--></script>
+<form id="oaem_election_form">
+Chapter/District:<br>
+<select id="chapter" name="chapter" aria-invalid="false">
+  <option value="">---</option><?php
+    foreach ($chapters AS $chapter) {
+      ?><option value="<?php esc_html_e($chapter->id) ?>"><?php esc_html_e($chapter->chapter_name . " (" . $chapter->district_name . ")") ?></option><?php
+    }
+?>
+</select><br><br>
+Troop Number:<br>
+<input id="troopnum" name="troopnum"><br><br>
+<input id="submit_election_button" value="Submit" type="button">
+</form>
+<div id="response_area">
+ This is where we'll get the response
+</div>
+    <?php
 
     $p->post_content = ob_get_clean();
     return array($p);
