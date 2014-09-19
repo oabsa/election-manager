@@ -42,6 +42,8 @@ function oaelectionmanager_enqueue_scripts() {
     wp_register_style( 'oaelectionmanager-style', plugins_url('style.css', __FILE__) );
     wp_enqueue_style( 'oaelectionmanager-style' );
     wp_enqueue_script( 'jquery' );
+    wp_enqueue_script( 'jquery-ui-datepicker' );
+    wp_enqueue_style('jquery-style', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css');
 }
 
 function oaelectionmanager_plugin_updater_init() {
@@ -371,46 +373,89 @@ function oaelectionmanager_submit_page($source_type) {
     ?>
     <script type='text/javascript'>
     <!--
-
-function oaem_submit_election() {
-    jQuery.ajax({
-        type: "post",
-        url: "<?php esc_html_e(admin_url('admin-ajax.php')) ?>",
-        data: {
-             action: 'oaem_submit_election',
-             _ajax_nonce: '<?php echo $nonce; ?>',
-             chapter: escape(jQuery('#chapter').val()),
-             troopnum: escape(jQuery('#troopnum').val())
-        },
-        beforeSend: function() {
-            jQuery("#submit_election_button").fadeOut('fast');
-        },
-        success: function(html) {
-            jQuery("#response_area").html(html);
-        }
-    });
-}
 jQuery(document).ready(function() {
     jQuery('#submit_election_button').click(function() {
-        oaem_submit_election();
+        var formdata = jQuery('#oaem_election_form').serializeArray();
+        formdata.push({name: 'action', value: 'oaem_submit_election'});
+        formdata.push({name: '_ajax_nonce', value: '<?php echo $nonce; ?>'});
+        /* form validation code should go here */
+        jQuery.ajax({
+            type: "post",
+            url: "<?php esc_html_e(admin_url('admin-ajax.php')) ?>",
+            data: formdata,
+            beforeSend: function() {
+                /* display a spinner here? */
+                jQuery("#submit_election_button").fadeOut('fast');
+            },
+            success: function(html) {
+                /* if we added a spinner above, make it go away here, probably add an error: hook for the same */
+                jQuery("#response_area").html(html);
+            }
+        });
+    });
+    jQuery('#election_date').datepicker({
+        yearRange: "-1:+0",
+        showButtonPanel: true,
+        changeMonth: true,
+        changeYear: true,
+        dateFormat: "mm/dd/yy",
+    });
+    jQuery('#NumberBallotsReturned').keyup(function() {
+        var returned = jQuery('#NumberBallotsReturned').val();
+        var required = Math.ceil(returned / 2);
+        jQuery('#NumberRequired').val(required);
     });
 });
 --></script>
 <form id="oaem_election_form">
-Chapter/District:<br>
-<select id="chapter" name="chapter" aria-invalid="false">
+<p>Chapter/District:<br>
+<select id="chapter" name="chapter">
   <option value="">---</option><?php
     foreach ($chapters AS $chapter) {
       ?><option value="<?php esc_html_e($chapter->id) ?>"><?php esc_html_e($chapter->chapter_name . " (" . $chapter->district_name . ")") ?></option><?php
     }
 ?>
-</select><br><br>
-Troop Number:<br>
-<input id="troopnum" name="troopnum"><br><br>
+</select></p>
+<p>Troop Number:<br>
+<input type="number" id="troopnum" name="troopnum" value="" size="4"></p>
+<p>What camp is the troop attending in 2014<br>
+<input type="text" id="camp" name="camp" value="" size="40"></p>
+<p>Date of Election (MM/DD/YYYY)<br>
+<input type="date" id="election_date" name="election_date" value="" size="10"></p>
+<p>Election Location (when and where does the unit meet?)<br>
+<textarea id="MeetingLocation" name="MeetingLocation" cols="40" rows="10"></textarea></p>
+<p>Number of Registered Active Youth (all youth active in the troop, whether or not they were present)<br>
+<input type="number" id="RegActiveYouth" name="RegActiveYouth" value="" size="5"></p>
+<p>Number of Youth Present<br>
+<input type="number" id="YouthPresent" name="YouthPresent" value="" size="5"></p>
+<p>Number of Scouts Eligible<br>
+<input type="number" id="NumberEligible" name="NumberEligible" value="" size="5"></p>
+<p>Number of Ballots Turned In<br>
+<input type="number" id="NumberBallotsReturned" name="NumberBallotsReturned" value="" size="5"></p>
+<p>Number of Votes  Required for Election (automatically calculated)<br>
+<input type="number" id="NumberRequired" name="NumberRequired" value="" size="5" readonly="readonly"></p>
+<p>Number of Youth Elected<br>
+<input type="number" id="NumberElected" name="NumberElected" value="" size="5"></p>
+<p>Unit Leader's Name<br>
+<input type="text" id="UnitLeaderName" name="UnitLeaderName" value="" size="40"></p>
+<p>Unit Leader's Phone Number<br>
+<input type="tel" id="UnitLeaderPhone" name="UnitLeaderPhone" value="" size="40"></p>
+<p>Unit Leader's Email Address<br>
+<input type="email" id="UnitLeaderEmail" name="UnitLeaderEmail" value="" size="40"></p>
+<p>Additional Information<br>
+<textarea id="AdditionalInfo" name="AdditionalInfo" cols="40" rows="10"></textarea></p>
+<p>Submitter's Name<br>
+<input type="text" id="SubmitterName" name="SubmitterName" value="" size="40"></p>
+<p>Submitter's Email Address<br>
+<input type="email" id="SubmitterEmail" name="SubmitterEmail" value="" size="40"></p>
+<p>Submitter's Phone Number<br>
+<input type="tel" id="SubmitterPhone" name="SubmitterPhone" value="" size="40"></p>
+
+
 <input id="submit_election_button" value="Submit" type="button">
 </form>
 <div id="response_area">
- This is where we'll get the response
+ This is where we'll get the response (for testing)
 </div>
     <?php
 
