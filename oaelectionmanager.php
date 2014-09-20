@@ -330,10 +330,10 @@ function oaelectionmanager_makedummypost() {
 
 function oaelectionmanager_ajax_submit_election() {
   check_ajax_referer("oaem_election_form"); // this is the name you gave the nonce
-  $chapter = $_POST["chapter"];
+  $chapter_id = $_POST["chapter"];
   $troop = $_POST["troopnum"];
 
-  ?>Got submission from Chapter <?php esc_html_e($chapter) ?> Troop <?php esc_html_e($troop)?>.<?php
+  ?>Got submission from Chapter <?php esc_html_e($chapter_id) ?> Troop <?php esc_html_e($troop)?>.<?php
   die(); // wordpress may print out a spurious zero without this
 }
 
