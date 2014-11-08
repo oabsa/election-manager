@@ -514,6 +514,15 @@ jQuery(document).ready(function() {
         jQuery("#scout_progressbar").progressbar("option", "value", current_scout_number);
         document.getElementById('oaem_scout_form').reset();
     });
+    jQuery('#camp_select').change(function() {
+        var camp_sel = document.getElementById('camp_select');
+        if (camp_sel.options[camp_sel.selectedIndex].value == 'Other') {
+            jQuery('#camp_other').show();
+            document.getElementById('camp_other').focus();
+        } else {
+            jQuery('#camp_other').hide();
+        }
+    });
     jQuery('#election_date').datepicker({
         yearRange: "-1:+0",
         showButtonPanel: true,
@@ -555,7 +564,16 @@ jQuery(document).ready(function() {
 </div>
 <div id="oaem_main_form" style="display: none;">
 <p>What camp is the troop attending in 2015?<br>
-<input type="text" id="camp" name="camp" value="" size="40"></p>
+<select id="camp_select" name="camp_select">
+<option value="">---</option>
+<option value="Gerber">Gerber Scout Reservation</option>
+<option value="DBA">D-bar-A Scout Ranch</option>
+<option value="Cole">Cole Canoe Base</option>
+<option value="Rotary">Camp Rotary</option>
+<option value="Rota-Kiwan">Camp Rota-Kiwan</option>
+<option value="Other">Other (please specify)</option>
+</select>
+<input style="display: none;" type="text" id="camp_other" name="camp_other" value="" size="40" required="required"></p>
 <p>Date of Election (MM/DD/YYYY)<br>
 <input type="date" id="election_date" name="election_date" value="" size="10" required="required"></p>
 <p>Election Location (when and where does the unit meet?)<br>
@@ -588,7 +606,7 @@ jQuery(document).ready(function() {
 <input type="tel" id="SubmitterPhone" name="SubmitterPhone" value="" size="40"></p>
 <img id="election_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_election_button" value="Submit" type="button">
 </div>
-<form>
+</form>
 <div id="oaem_election_header" style="display: none;">
 <p>From election dated <b><span id="oaem_election_date"></span></b></p>
 </div>
