@@ -539,7 +539,7 @@ jQuery(document).ready(function() {
 <form id="oaem_election_form">
 <div id="oaem_troop_form">
 <p>Chapter/District:<br>
-<select id="chapter" name="chapter">
+<select id="chapter" name="chapter" required="required">
   <option value="">---</option><?php
     foreach ($chapters AS $chapter) {
       ?><option value="<?php esc_html_e($chapter->id) ?>"><?php esc_html_e($chapter->chapter_name . " (" . $chapter->district_name . ")") ?></option><?php
@@ -547,31 +547,31 @@ jQuery(document).ready(function() {
 ?>
 </select></p>
 <p>Troop Number:<br>
-<input type="number" id="troopnum" name="troopnum" value="" size="4">
+<input type="number" id="troopnum" name="troopnum" value="" size="4" required="required">
 <img id="troop_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_troop_button" value="Confirm Troop" type="button"></p>
 </div>
 <div id="oaem_main_header" style="display: none;">
 <p>Submitting election results for <b></span> Troop <span id="oaem_troop_num"></span></b> in<br><b><span id="oaem_chapter_name"></span></b>:</p>
 </div>
 <div id="oaem_main_form" style="display: none;">
-<p>What camp is the troop attending in 2014<br>
+<p>What camp is the troop attending in 2015?<br>
 <input type="text" id="camp" name="camp" value="" size="40"></p>
 <p>Date of Election (MM/DD/YYYY)<br>
-<input type="date" id="election_date" name="election_date" value="" size="10"></p>
+<input type="date" id="election_date" name="election_date" value="" size="10" required="required"></p>
 <p>Election Location (when and where does the unit meet?)<br>
 <textarea id="MeetingLocation" name="MeetingLocation" cols="40" rows="10"></textarea></p>
 <p>Number of Registered Active Youth (all youth active in the troop, whether or not they were present)<br>
-<input type="number" id="RegActiveYouth" name="RegActiveYouth" value="" size="5"></p>
+<input type="number" id="RegActiveYouth" name="RegActiveYouth" value="" size="5" required="required"></p>
 <p>Number of Youth Present<br>
-<input type="number" id="YouthPresent" name="YouthPresent" value="" size="5"></p>
+<input type="number" id="YouthPresent" name="YouthPresent" value="" size="5" required="required"></p>
 <p>Number of Scouts Eligible<br>
-<input type="number" id="NumberEligible" name="NumberEligible" value="" size="5"></p>
+<input type="number" id="NumberEligible" name="NumberEligible" value="" size="5" required="required"></p>
 <p>Number of Ballots Turned In<br>
-<input type="number" id="NumberBallotsReturned" name="NumberBallotsReturned" value="" size="5"></p>
+<input type="number" id="NumberBallotsReturned" name="NumberBallotsReturned" value="" size="5" required="required"></p>
 <p>Number of Votes  Required for Election (automatically calculated)<br>
 <input type="number" id="NumberRequired" name="NumberRequired" value="" size="5" readonly="readonly"></p>
 <p>Number of Youth Elected<br>
-<input type="number" id="NumberElected" name="NumberElected" value="" size="5"></p>
+<input type="number" id="NumberElected" name="NumberElected" value="" size="5" required="required"></p>
 <p>Unit Leader's Name<br>
 <input type="text" id="UnitLeaderName" name="UnitLeaderName" value="" size="40"></p>
 <p>Unit Leader's Phone Number<br>
@@ -609,16 +609,16 @@ jQuery(document).ready(function() {
 <div id="scout_progressbar"></div>
 <p>Entering scout #<span id="oaem_current_scout"></span> of <span id="oaem_total_scouts"></span>:</p>
 <p>Legal First Name<br>
-<input type="text" id="ScoutFirstName" name="ScoutFirstName" value="" size="40"></p>
+<input type="text" id="ScoutFirstName" name="ScoutFirstName" value="" size="40" required="required"></p>
 
 <p>Middle Name (if provided)<br>
 <input type="text" id="ScoutMiddleName" name="ScoutMiddleName" value="" size="40"></p>
 
 <p>Last Name<br>
-<input type="text" id="ScoutLastName" name="ScoutLastName" value="" size="40"></p>
+<input type="text" id="ScoutLastName" name="ScoutLastName" value="" size="40" required="required"></p>
 
 <p>BSA Member ID<br>
-<input type="number" id="BSAID" name="BSAID" value="" size="9"></p>
+<input type="text" id="BSAID" name="BSAID" value="" size="9" pattern="1\d{8}|[4-9]\d{6}" required="required"></p>
 
 <p>Scout's Email Address (if 13 or older)<br>
 <input type="email" id="ScoutEmail" name="ScoutEmail" value="" size="40"></p>
@@ -641,10 +641,10 @@ jQuery(document).ready(function() {
 </select></p>
 
 <p>Zip Code<br>
-<input type="number" id="ZipCode" name="ZipCode" value="" size="9"></p>
+<input type="text" id="ZipCode" name="ZipCode" value="" size="10" pattern="\d{5}(-\d{4})?"></p>
 
 <p>Birthdate (MM/DD/YYYY)<br>
-<input type="date" id="BirthDate" name="BirthDate" value="" size="10"></p>
+<input type="date" id="BirthDate" name="BirthDate" value="" size="10" required="required"></p>
 
 <p>Phone Number<br>
 <input type="tel" id="PhoneNumber" name="PhoneNumber" value="" size="40"></p>
