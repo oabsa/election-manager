@@ -37,13 +37,17 @@ add_action( 'init', 'oaelectionmanager_plugin_updater_init' );
 
 add_action( 'wp_ajax_oaem_submit_election', 'oaelectionmanager_ajax_submit_election' );
 add_action( 'wp_ajax_nopriv_oaem_submit_election', 'oaelectionmanager_ajax_submit_election' ); // need this to serve non logged in users
+add_action( 'wp_ajax_oaem_check_troop_submitted', 'oaelectionmanager_ajax_check_troop_submitted' );
+add_action( 'wp_ajax_nopriv_oaem_check_troop_submitted', 'oaelectionmanager_ajax_check_troop_submitted' ); // need this to serve non logged in users
 
 function oaelectionmanager_enqueue_scripts() {
     wp_register_style( 'oaelectionmanager-style', plugins_url('style.css', __FILE__) );
     wp_enqueue_style( 'oaelectionmanager-style' );
     wp_enqueue_script( 'jquery' );
     wp_enqueue_script( 'jquery-ui-datepicker' );
-    wp_enqueue_style('jquery-style', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css');
+    wp_enqueue_script( 'jquery-ui-progressbar' );
+    wp_enqueue_script( 'jquery-inputmask', plugins_url('jquery.inputmask.bundle.min.js', __FILE__) );
+    wp_enqueue_style( 'jquery-style', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css' );
 }
 
 function oaelectionmanager_plugin_updater_init() {
@@ -337,6 +341,33 @@ function oaelectionmanager_ajax_submit_election() {
   die(); // wordpress may print out a spurious zero without this
 }
 
+function oaelectionmanager_ajax_check_troop_submitted() {
+  global $wpdb;
+  $dbprefix = $wpdb->prefix . "oaem_";
+
+  check_ajax_referer("oaem_election_form"); // this is the name you gave the nonce
+  $submission_source = $_POST["submission_source"];
+  $chapter_id = $_POST["chapter"];
+  $troop = $_POST["troopnum"];
+
+  $troop_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM ${dbprefix}troop WHERE troopnum = ? AND chapter_id = ?", $troop, $chapter_id));
+  if (empty($troop_id)) {
+    # troop hasn't been submitted at all
+    ?>false<?php
+  }
+  else {
+    $election_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM ${dbprefix}election e INNER JOIN ${dbprefix}troop t ON e.troop_id = t.id WHERE e.submission_source = ? AND t.chapter_id = ? AND t.troopnum = ?", $submission_source, $chapter_id, $troop));
+    if (empty($election_id)) {
+      # troop submitted, but not by this entity
+      ?>false<?php
+    } else {
+      # troop already submitted by this entity
+      ?>true<?php
+    }
+  }
+  die(); // wordpress may print out a spurious zero without this
+}
+
 /*
  * ===================================
  *
@@ -373,7 +404,55 @@ function oaelectionmanager_submit_page($source_type) {
     ?>
     <script type='text/javascript'>
     <!--
+var current_scout_number = 1;
+var num_elected = 0;
 jQuery(document).ready(function() {
+    var phones = [{ "mask": "(###) ###-####"}];
+    jQuery('input[type="tel"]').inputmask({
+        mask: phones,
+        greedy: false,
+        definitions: { '#': { validator: "[0-9]", cardinality: 1}}
+    });
+    jQuery('#submit_troop_button').click(function() {
+        var formdata = Array();
+        formdata.push({name: 'chapter', value: document.getElementById('chapter').value});
+        formdata.push({name: 'troopnum', value: document.getElementById('troopnum').value});
+        formdata.push({name: 'submission_source', value: '<?php esc_html_e($source_type); ?>'});
+        formdata.push({name: 'action', value: 'oaem_check_troop_submitted'});
+        formdata.push({name: '_ajax_nonce', value: '<?php echo $nonce; ?>'});
+        /* form validation code should go here */
+        jQuery.ajax({
+            type: "post",
+            url: "<?php esc_html_e(admin_url('admin-ajax.php')) ?>",
+            data: formdata,
+            beforeSend: function() {
+                jQuery("#submit_troop_button").hide();
+		jQuery("#troop_spinner").show();
+            },
+            success: function(html) {
+                if (html == 'true') {
+                    jQuery("#submit_troop_button").show();
+                    jQuery("response_area").html("Your election has already been submitted. If you think this is in error or need to make corrections, please contact your chapter chief or email unitelectins@nslodge.org, or choose a different troop above.");
+                } else if (html == 'false') {
+                    /* if we got here, everything checked out, set up the main form */
+                    var chap_sel = document.getElementById('chapter');
+                    jQuery("#oaem_chapter_name").html(chap_sel.options[chap_sel.selectedIndex].textContent);
+                    jQuery("#oaem_troop_num").html(document.getElementById('troopnum').value);
+                    jQuery("#oaem_troop_form").fadeOut('slow', function() {
+                        jQuery("#oaem_main_header").fadeIn('slow');
+                        jQuery("#oaem_main_form").fadeIn('slow');
+                    });
+                } else {
+                    jQuery("#response_area").html("Something went horribly wrong.");
+                }
+            },
+            error: function(jqxhr, errorString, e) {
+		jQuery("#troop_spinner").fadeOut('fast');
+                jQuery("#response_area").html(e);
+                jQuery("#submit_troop_button").fadeIn('slow');
+            }
+        });
+    });
     jQuery('#submit_election_button').click(function() {
         var formdata = jQuery('#oaem_election_form').serializeArray();
         formdata.push({name: 'action', value: 'oaem_submit_election'});
@@ -384,20 +463,70 @@ jQuery(document).ready(function() {
             url: "<?php esc_html_e(admin_url('admin-ajax.php')) ?>",
             data: formdata,
             beforeSend: function() {
-                /* display a spinner here? */
-                jQuery("#submit_election_button").fadeOut('fast');
+                jQuery("#submit_election_button").fadeOut('slow', function() {
+		    jQuery("#election_spinner").show();
+                });
             },
             success: function(html) {
-                /* if we added a spinner above, make it go away here, probably add an error: hook for the same */
-                jQuery("#response_area").html(html);
+                jQuery("#election_spinner").hide();
+                jQuery("#oaem_election_date").html(document.getElementById('election_date').value);
+                jQuery("#oaem_current_scout").html(current_scout_number);
+                var num_elected = document.getElementById('NumberElected').value;
+                jQuery("#oaem_total_scouts").html(num_elected);
+                jQuery('html,body').animate({scrollTop: jQuery('#content').offset().top},'slow');
+                jQuery("#oaem_main_form").fadeOut('slow', function() {
+                    jQuery("#oaem_election_header").fadeIn('slow');
+                    num_elected = document.getElementById('NumberElected').value;
+                    if (num_elected == 0) {
+                        jQuery("#oaem_scouts_none").fadeIn('slow');
+                    } else {
+                        jQuery("#oaem_scout_div").fadeIn('slow');
+                        jQuery("#scout_progressbar").progressbar();
+                        jQuery("#scout_progressbar").progressbar("option", "max",  parseInt(num_elected) + 1);
+                        jQuery("#scout_progressbar").progressbar("option", "value", 1);
+                    }
+                });
+            },
+            error: function(jqxhr, errorString) {
+		jQuery("#election_spinner").hide();
+                jQuery("#response_area").html("Lookup failed: " . errorString);
+                jQuery("#submit_election_button").fadeIn('fast');
             }
         });
+    });
+    jQuery('#submit_scout_button').click(function() {
+        jQuery('html,body').animate({scrollTop: jQuery('#content').offset().top},'slow');
+        var scout_list_body = document.getElementById("oaem_scout_list_body");
+        var new_tr = document.createElement("tr");
+        var new_bsaid_td = document.createElement("td");
+        var new_name_td = document.createElement("td");
+        var new_dob_td = document.createElement("td");
+        new_bsaid_td.appendChild(document.createTextNode(document.getElementById("BSAID").value));
+        new_dob_td.appendChild(document.createTextNode(document.getElementById("BirthDate").value));
+        new_name_td.appendChild(document.createTextNode(document.getElementById("ScoutFirstName").value + " " + document.getElementById("ScoutLastName").value));
+        new_tr.appendChild(new_bsaid_td);
+        new_tr.appendChild(new_name_td);
+        new_tr.appendChild(new_dob_td);
+        scout_list_body.appendChild(new_tr);
+        jQuery("#oaem_scout_list").fadeIn('slow');
+        current_scout_number = current_scout_number + 1;
+        jQuery("#oaem_current_scout").html(current_scout_number);
+        jQuery("#scout_progressbar").progressbar("option", "value", current_scout_number);
+        document.getElementById('oaem_scout_form').reset();
     });
     jQuery('#election_date').datepicker({
         yearRange: "-1:+0",
         showButtonPanel: true,
         changeMonth: true,
         changeYear: true,
+        dateFormat: "mm/dd/yy",
+    });
+    jQuery('#BirthDate').datepicker({
+        yearRange: "-21:-11",
+        showButtonPanel: true,
+        changeMonth: true,
+        changeYear: true,
+	defaultDate: "07/01/1998",
         dateFormat: "mm/dd/yy",
     });
     jQuery('#NumberBallotsReturned').keyup(function() {
@@ -408,6 +537,7 @@ jQuery(document).ready(function() {
 });
 --></script>
 <form id="oaem_election_form">
+<div id="oaem_troop_form">
 <p>Chapter/District:<br>
 <select id="chapter" name="chapter">
   <option value="">---</option><?php
@@ -417,7 +547,13 @@ jQuery(document).ready(function() {
 ?>
 </select></p>
 <p>Troop Number:<br>
-<input type="number" id="troopnum" name="troopnum" value="" size="4"></p>
+<input type="number" id="troopnum" name="troopnum" value="" size="4">
+<img id="troop_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_troop_button" value="Confirm Troop" type="button"></p>
+</div>
+<div id="oaem_main_header" style="display: none;">
+<p>Submitting election results for <b></span> Troop <span id="oaem_troop_num"></span></b> in<br><b><span id="oaem_chapter_name"></span></b>:</p>
+</div>
+<div id="oaem_main_form" style="display: none;">
 <p>What camp is the troop attending in 2014<br>
 <input type="text" id="camp" name="camp" value="" size="40"></p>
 <p>Date of Election (MM/DD/YYYY)<br>
@@ -450,12 +586,73 @@ jQuery(document).ready(function() {
 <input type="email" id="SubmitterEmail" name="SubmitterEmail" value="" size="40"></p>
 <p>Submitter's Phone Number<br>
 <input type="tel" id="SubmitterPhone" name="SubmitterPhone" value="" size="40"></p>
+<img id="election_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_election_button" value="Submit" type="button">
+</div>
+<form>
+<div id="oaem_election_header" style="display: none;">
+<p>From election dated <b><span id="oaem_election_date"></span></b></p>
+</div>
+<div id="oaem_scout_list" style="display: none;">
+<table id="oaem_scout_list_table">
+<thead>
+<tr><th>BSA ID</th><th>Name</th><th>Date of Birth</th></tr>
+</thead>
+<tbody id="oaem_scout_list_body">
+</tbody>
+</table>
+</div>
+<div id="oaem_scouts_none" style="display: none;">
+<p>You indicated that no scouts were elected.</p>
+</div>
+<div id="oaem_scout_div" style="display: none;">
+<form id="oaem_scout_form">
+<div id="scout_progressbar"></div>
+<p>Entering scout #<span id="oaem_current_scout"></span> of <span id="oaem_total_scouts"></span>:</p>
+<p>Legal First Name<br>
+<input type="text" id="ScoutFirstName" name="ScoutFirstName" value="" size="40"></p>
 
+<p>Middle Name (if provided)<br>
+<input type="text" id="ScoutMiddleName" name="ScoutMiddleName" value="" size="40"></p>
 
-<input id="submit_election_button" value="Submit" type="button">
+<p>Last Name<br>
+<input type="text" id="ScoutLastName" name="ScoutLastName" value="" size="40"></p>
+
+<p>BSA Member ID<br>
+<input type="number" id="BSAID" name="BSAID" value="" size="9"></p>
+
+<p>Scout's Email Address (if 13 or older)<br>
+<input type="email" id="ScoutEmail" name="ScoutEmail" value="" size="40"></p>
+
+<p>Parent's Email Address<br>
+<input type="email" id="ParentEmail" name="ParentEmail" value="" size="40"></p>
+
+<p>Street Address, Line 1<br>
+<input type="text" id="AddressLine1" name="AddressLine1" value="" size="40"></p>
+
+<p>Street Address, Line 2 (if necessary)<br>
+<input type="text" id="AddressLine2" name="AddressLine2" value="" size="40"></p>
+
+<p>City<br>
+<input type="text" id="City" name="City" value="" size="40"></p>
+
+<p>State<br>
+<select id="State" name="State">
+<option value="MI" selected="selected">Michigan</option>
+</select></p>
+
+<p>Zip Code<br>
+<input type="number" id="ZipCode" name="ZipCode" value="" size="9"></p>
+
+<p>Birthdate (MM/DD/YYYY)<br>
+<input type="date" id="BirthDate" name="BirthDate" value="" size="10"></p>
+
+<p>Phone Number<br>
+<input type="tel" id="PhoneNumber" name="PhoneNumber" value="" size="40"></p>
+
+<img id="scout_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_scout_button" value="Add Scout" type="button">
 </form>
+</div>
 <div id="response_area">
- This is where we'll get the response (for testing)
 </div>
     <?php
 
