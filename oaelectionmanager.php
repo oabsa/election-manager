@@ -46,7 +46,9 @@ function oaelectionmanager_enqueue_scripts() {
     wp_enqueue_script( 'jquery' );
     wp_enqueue_script( 'jquery-ui-datepicker' );
     wp_enqueue_script( 'jquery-ui-progressbar' );
+    wp_enqueue_script( 'jquery-effects-core' );
     wp_enqueue_script( 'jquery-inputmask', plugins_url('jquery.inputmask.bundle.min.js', __FILE__) );
+    wp_enqueue_script( 'jquery-color' );
     wp_enqueue_style( 'jquery-style', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css' );
 }
 
@@ -406,6 +408,7 @@ function oaelectionmanager_submit_page($source_type) {
     <!--
 var current_scout_number = 1;
 var num_elected = 0;
+var scout_list = Array();
 jQuery(document).ready(function() {
     var phones = [{ "mask": "(###) ###-####"}];
     jQuery('input[type="tel"]').inputmask({
@@ -438,8 +441,14 @@ jQuery(document).ready(function() {
                     var chap_sel = document.getElementById('chapter');
                     jQuery("#oaem_chapter_name").html(chap_sel.options[chap_sel.selectedIndex].textContent);
                     jQuery("#oaem_troop_num").html(document.getElementById('troopnum').value);
-                    jQuery("#oaem_troop_form").fadeOut('slow', function() {
-                        jQuery("#oaem_main_header").fadeIn('slow');
+                    jQuery("#oaem_troop_form").css({ border: "2px solid black" });
+                    jQuery("#oaem_main_header").css({ border: "2px solid black" });
+                    var headerWidth = jQuery("#oaem_main_header").width();
+                    var headerHeight = jQuery("#oaem_main_header").height();
+                    jQuery("#oaem_troop_form").animate({ width: headerWidth, height: headerHeight }, 500, function() {
+                        jQuery("#oaem_troop_form").hide();
+                        jQuery("#oaem_main_header").show();
+                        jQuery("#oaem_main_header").css({ border: "none" });
                         jQuery("#oaem_main_form").fadeIn('slow');
                     });
                 } else {
@@ -471,20 +480,32 @@ jQuery(document).ready(function() {
                 jQuery("#election_spinner").hide();
                 jQuery("#oaem_election_date").html(document.getElementById('election_date').value);
                 jQuery("#oaem_current_scout").html(current_scout_number);
-                var num_elected = document.getElementById('NumberElected').value;
+                num_elected = document.getElementById('NumberElected').value;
                 jQuery("#oaem_total_scouts").html(num_elected);
-                jQuery('html,body').animate({scrollTop: jQuery('#content').offset().top},'slow');
-                jQuery("#oaem_main_form").fadeOut('slow', function() {
-                    jQuery("#oaem_election_header").fadeIn('slow');
-                    num_elected = document.getElementById('NumberElected').value;
-                    if (num_elected == 0) {
-                        jQuery("#oaem_scouts_none").fadeIn('slow');
-                    } else {
-                        jQuery("#oaem_scout_div").fadeIn('slow');
+                jQuery("#oaem_main_form").css({ border: "2px solid black" });
+                jQuery("#oaem_election_header").css({ border: "2px solid black" });
+                jQuery('html,body').animate({scrollTop: jQuery('#main').offset().top},'slow', function() {
+                    var headerWidth = jQuery("#oaem_main_form").width();
+                    var headerHeight = jQuery("#oaem_election_header").height();
+                    jQuery("#oaem_main_form").animate({ width: headerWidth, height: headerHeight }, 500, function() {
+                        jQuery("#oaem_main_form").hide();
                         jQuery("#scout_progressbar").progressbar();
-                        jQuery("#scout_progressbar").progressbar("option", "max",  parseInt(num_elected) + 1);
+                        jQuery("#scout_progressbar").progressbar("option", "max",  parseInt(num_elected) + 2);
                         jQuery("#scout_progressbar").progressbar("option", "value", 1);
-                    }
+                        jQuery("#oaem_election_header").show();
+                        jQuery("#oaem_election_header").css({ border: "none" });
+                        var destColor = jQuery("#oaem_election_header").css('backgroundColor');
+                        //jQuery("#oaem_election_header").css({ backgroundColor: '#7777FF' });
+                        //jQuery("#oaem_election_header").animate({
+                        //    backgroundColor: jQuery.Color( destColor )
+                        //}, 3000);
+                        window.num_elected = document.getElementById('NumberElected').value;
+                        if (num_elected == 0) {
+                            jQuery("#oaem_scouts_none").fadeIn('slow');
+                        } else {
+                            jQuery("#oaem_scout_div").fadeIn('slow');
+                        }
+                    });
                 });
             },
             error: function(jqxhr, errorString) {
@@ -495,7 +516,10 @@ jQuery(document).ready(function() {
         });
     });
     jQuery('#submit_scout_button').click(function() {
-        jQuery('html,body').animate({scrollTop: jQuery('#content').offset().top},'slow');
+        jQuery('html,body').animate({scrollTop: jQuery('#main').offset().top},'slow');
+        var formdata = jQuery('#oaem_scout_form').serializeArray();
+        scout_list.push(formdata);
+        jQuery("#oaem_scout_div").fadeOut('slow', function() {
         var scout_list_body = document.getElementById("oaem_scout_list_body");
         var new_tr = document.createElement("tr");
         var new_bsaid_td = document.createElement("td");
@@ -507,12 +531,26 @@ jQuery(document).ready(function() {
         new_tr.appendChild(new_bsaid_td);
         new_tr.appendChild(new_name_td);
         new_tr.appendChild(new_dob_td);
+        new_tr.id = 'scout_list_item_' + current_scout_number;
         scout_list_body.appendChild(new_tr);
-        jQuery("#oaem_scout_list").fadeIn('slow');
+        var oaem_toAnimate = '#' + new_tr.id + " td";
+        var destColor = jQuery(oaem_toAnimate).css('backgroundColor');
+        jQuery(oaem_toAnimate).css({ backgroundColor: '#7777FF' });
+        jQuery(oaem_toAnimate).animate({
+            backgroundColor: jQuery.Color( destColor )
+        }, 3000);
         current_scout_number = current_scout_number + 1;
         jQuery("#oaem_current_scout").html(current_scout_number);
         jQuery("#scout_progressbar").progressbar("option", "value", current_scout_number);
         document.getElementById('oaem_scout_form').reset();
+        if (current_scout_number > num_elected) {
+            jQuery("#oaem_scout_div").fadeOut('slow', function() {
+                jQuery("#oaem_completion_form").fadeIn('slow');
+            });
+        } else {
+            jQuery("#oaem_scout_div").fadeIn('slow');
+        }
+        });
     });
     jQuery('#camp_select').change(function() {
         var camp_sel = document.getElementById('camp_select');
@@ -609,8 +647,6 @@ jQuery(document).ready(function() {
 </form>
 <div id="oaem_election_header" style="display: none;">
 <p>From election dated <b><span id="oaem_election_date"></span></b></p>
-</div>
-<div id="oaem_scout_list" style="display: none;">
 <table id="oaem_scout_list_table">
 <thead>
 <tr><th>BSA ID</th><th>Name</th><th>Date of Birth</th></tr>
@@ -618,13 +654,13 @@ jQuery(document).ready(function() {
 <tbody id="oaem_scout_list_body">
 </tbody>
 </table>
+<div id="scout_progressbar"></div>
 </div>
 <div id="oaem_scouts_none" style="display: none;">
 <p>You indicated that no scouts were elected.</p>
 </div>
 <div id="oaem_scout_div" style="display: none;">
 <form id="oaem_scout_form">
-<div id="scout_progressbar"></div>
 <p>Entering scout #<span id="oaem_current_scout"></span> of <span id="oaem_total_scouts"></span>:</p>
 <p>Legal First Name<br>
 <input type="text" id="ScoutFirstName" name="ScoutFirstName" value="" size="40" required="required"></p>
@@ -669,6 +705,11 @@ jQuery(document).ready(function() {
 
 <img id="scout_spinner" src="<?php esc_html_e(plugins_url('images/spinner.gif', __FILE__)) ?>" alt="spinner" style="display: none;"><input id="submit_scout_button" value="Add Scout" type="button">
 </form>
+</div>
+<div id="oaem_completion_form" style="display: none;">
+<p>You're almost done!</p>
+<p>Submit this election report?"</p>
+<input id="submit_report" value="Submit Report" type="button">
 </div>
 <div id="response_area">
 </div>
